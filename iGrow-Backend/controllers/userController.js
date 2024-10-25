@@ -24,7 +24,7 @@ exports.Login = async (req, res, next) => {
     const name = user.name;
     const id = user._id;
     const role = user.role;
-
+//testlang
     res.status(200).json({  name, id, role });
     console.log("Login Successfully")
   } catch (error) {
