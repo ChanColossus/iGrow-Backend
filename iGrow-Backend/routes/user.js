@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { Register,  Login } = require("../controllers/userController");
+const { Register,  Login, Verify } = require("../controllers/userController");
 const {isAuthenticated} = require('../middlewares/auth.js')
 router.post("/register", Register);
-// router.get("/verify/:token", Verify);
+router.get("/verify/:token", Verify);
 router.post("/login", Login);
 // router.get("/profile",isAuthenticated, userProfile);
 // router.get("/user", getAllUser);
