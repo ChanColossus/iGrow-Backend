@@ -2,6 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary");
+const firebase = require("firebase/app");
+require("firebase/auth");
 const app = express();
 const port = 8000;
 const cors = require("cors");
@@ -35,6 +37,16 @@ mongoose
 app.listen(port, () => {
   console.log("Server is running on port 8000");
 });
+const firebaseConfig = {
+  apiKey: "AIzaSyAHL2bJW2dZ08CQRaPOSMTIVuYJRd1LWVM",
+  authDomain: "igrow-7c344.firebaseapp.com",
+  projectId: "igrow-7c344",
+  storageBucket: "igrow-7c344.appspot.com",
+  messagingSenderId: "669713364638",
+  appId: "1:669713364638:web:f496cd0fbc804bae086d8f",
+  measurementId: "G-XEGV286Q84"
+};
+firebase.initializeApp(firebaseConfig);
 // cloudinary.config({
 //   cloud_name: "dhndcs09a",
 //   api_key: "433952899232498",

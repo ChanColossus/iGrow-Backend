@@ -1,45 +1,50 @@
 const User = require("../models/user");
-const nodemailer = require("nodemailer");
-const crypto = require("crypto");
+const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
+const crypto = require('crypto');
 const jwt = require("jsonwebtoken");
 
+
+
 const sendVerificationEmail = async (email, verificationToken) => {
-  //create a nodemailer transport
+  // Create an OAuth2 client
+  const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  oauth2Client.setCredentials({ access_token: REFRESH_TOKEN });
 
-  const transporter = nodemailer.createTransport({
-    //configure the email service
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525, // or 465 or 587 or another Mailtrap port
-    auth: {
-      user: "fa59208cd93371",
-      pass: "82bc14cd74667e",
-    },
-  });
-
-  //compose the email message
-  const mailOptions = {
-    from: "iGrow.com",
-    to: email,
-    subject: "Email Verification",
-    text: `Please click the following link to verify your email: http://192.168.100.117:8000/verify/${verificationToken}`,
-  };
-
-  //send the email
   try {
+    // Generate a fresh access token
+    const accessToken = (await oauth2Client.getAccessToken()).token;
+
+
+    // Create a Nodemailer transporter using OAuth2 with Gmail
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: 'igrowdsa4@gmail.com',
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: accessToken.token, // Access token generated on each send attempt
+      },
+    });
+
+    // Compose the email message
+    const mailOptions = {
+      from: 'iGrow.com <igrowdsa4@gmail.com>',
+      to: email,
+      subject: 'Email Verification',
+      text: `Please click the following link to verify your email: http://192.168.100.117:8000/verify/${verificationToken}`,
+    };
+
+    // Send the email
     await transporter.sendMail(mailOptions);
+    console.log('Verification email sent successfully!');
   } catch (error) {
-    console.log("Error sending verification email", error);
+    console.error('Error sending verification email', error);
   }
 };
 
-nodemailer;
-const generateSecretKey = () => {
-  const secretKey = crypto.randomBytes(32).toString("hex");
-
-  return secretKey;
-};
-
-const secretKey = generateSecretKey();
 
 exports.Login = async (req, res, next) => {
   try {
@@ -70,25 +75,57 @@ exports.Login = async (req, res, next) => {
 };
 
 exports.Register = async (req, res, next) => {
-    try {
-      const { name, email, password } = req.body;
-      //check if the email is already registered
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Email was already registered" });
-      }
-      //create a new user
-      const newUser = new User({ name, email, password });
-      //genereate and store the verification token
-      newUser.verificationToken = crypto.randomBytes(20).toString("hex");
-      //save the user to the database
-      await newUser.save();
-      sendVerificationEmail(newUser.email, newUser.verificationToken);
-      res.status(200).json({ message: "Registration Successfull" });
-    } catch (error) {
-      console.log("error registering user", error);
-      res.status(500).json({ message: "Registration Failed" });
-}};
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if the email is already registered
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email was already registered" });
+    }
+    // Create a new user
+    const newUser = new User({ name, email, password });
+
+    // Generate and store the verification token
+    newUser.verificationToken = crypto.randomBytes(20).toString("hex");
+
+    // Save the user to the database
+    await newUser.save();
+    
+      // Replace these with your Mailtrap or Gmail SMTP credentials
+      const gmailConfig = {
+        service: "gmail",
+        auth: {
+          user: "myrmiproductions@gmail.com",
+          pass: "bkkg uqoq dbrh qhxm", // Generate an app-specific password for better security
+        },
+      };
+    
+      // Create a Nodemailer transporter using Gmail
+      const transporter = nodemailer.createTransport(gmailConfig);
+    
+      const mailOptions = {
+        from: "myrmiproductions@gmail.com", // Replace with your sender email
+        to: newUser.email, // Recipient email
+        subject: "Verify your account",
+        html: `
+          <h3>Email Verification</h3>
+          <p>Please click the link below to verify your email address:</p>
+          <a href="http://192.168.100.117:8000/verify/${newUser.verificationToken}">Verify your email</a>
+          <p>If not clickable browse this:</p>
+          <a>http://192.168.100.117:8000/verify/${newUser.verificationToken}</a>
+        `,
+      };
+      transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "Registration Successful" });
+  } catch (error) {
+    console.error("Error registering user", error);
+    res.status(500).json({ message: "Registration Failed" });
+  }
+};
+
+
 
 exports.Verify = async (req, res, next) => {
   try {
@@ -106,7 +143,7 @@ exports.Verify = async (req, res, next) => {
 
     await user.save();
 
-    res.status(200).json({ message: "Email Verified Successfully" });
+    res.status(200).json({ message: "Email Verified Successfully, Go back to Application" });
   } catch (error) {
     res.status(500).json({ message: "Email Verification Failed" });
   }
