@@ -92,7 +92,7 @@ exports.Register = async (req, res, next) => {
     // Save the user to the database
     await newUser.save();
     
-      // Replace these with your Mailtrap or Gmail SMTP credentials
+     
       const gmailConfig = {
         service: "gmail",
         auth: {
