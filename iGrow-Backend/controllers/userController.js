@@ -94,9 +94,9 @@ exports.Register = async (req, res, next) => {
         html: `
           <h3>Email Verification</h3>
           <p>Please click the link below to verify your email address:</p>
-          <a href="http://192.168.100.117:8000/verify/${newUser.verificationToken}">Verify your email</a>
+          <a href="https://igrow-backend.onrender.com/verify/${newUser.verificationToken}">Verify your email</a>
           <p>If not clickable browse this:</p>
-          <a>http://192.168.100.117:8000/verify/${newUser.verificationToken}</a>
+          <a>https://igrow-backend.onrender.com/verify/${newUser.verificationToken}</a>
         `,
       };
       transporter.sendMail(mailOptions);
