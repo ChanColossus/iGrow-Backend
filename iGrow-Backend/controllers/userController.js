@@ -1,50 +1,10 @@
-const User = require("../models/user");
+const User = require("../models/user"); 
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const crypto = require('crypto');
 const jwt = require("jsonwebtoken");
-
-
-
-const sendVerificationEmail = async (email, verificationToken) => {
-  // Create an OAuth2 client
-  const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-  oauth2Client.setCredentials({ access_token: REFRESH_TOKEN });
-
-  try {
-    // Generate a fresh access token
-    const accessToken = (await oauth2Client.getAccessToken()).token;
-
-
-    // Create a Nodemailer transporter using OAuth2 with Gmail
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        type: 'OAuth2',
-        user: 'igrowdsa4@gmail.com',
-        clientId: CLIENT_ID,
-        clientSecret: CLIENT_SECRET,
-        refreshToken: REFRESH_TOKEN,
-        accessToken: accessToken.token, // Access token generated on each send attempt
-      },
-    });
-
-    // Compose the email message
-    const mailOptions = {
-      from: 'iGrow.com <igrowdsa4@gmail.com>',
-      to: email,
-      subject: 'Email Verification',
-      text: `Please click the following link to verify your email: http://192.168.100.117:8000/verify/${verificationToken}`,
-    };
-
-    // Send the email
-    await transporter.sendMail(mailOptions);
-    console.log('Verification email sent successfully!');
-  } catch (error) {
-    console.error('Error sending verification email', error);
-  }
-};
-
+const cloudinary = require("cloudinary");
+const multer = require('multer');
 
 exports.Login = async (req, res, next) => {
   try {
@@ -75,21 +35,44 @@ exports.Login = async (req, res, next) => {
 };
 
 exports.Register = async (req, res, next) => {
+  console.log(req.files);
   try {
     const { name, email, password } = req.body;
 
-    // Check if the email is already registered
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email was already registered" });
     }
-    // Create a new user
-    const newUser = new User({ name, email, password });
+    
+  let images = [];
 
-    // Generate and store the verification token
+  if (req.files && req.files.length > 0) {
+    images = req.files.map((file) => file.path);
+  }
+
+  let imagesLinks = [];
+
+  for (let i = 0; i < images.length; i++) {
+    let imageDataUri = images[i];
+
+    try {
+      const result = await cloudinary.v2.uploader.upload(imageDataUri, {
+        folder: "user",
+      });
+
+      imagesLinks.push({
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+    } catch (error) {
+      console.log("Error uploading image:", error);
+    }
+  }
+  dp = imagesLinks;
+    const newUser = new User({ name, email, password, dp });
+
     newUser.verificationToken = crypto.randomBytes(20).toString("hex");
 
-    // Save the user to the database
     await newUser.save();
     
      
@@ -97,16 +80,16 @@ exports.Register = async (req, res, next) => {
         service: "gmail",
         auth: {
           user: "myrmiproductions@gmail.com",
-          pass: "bkkg uqoq dbrh qhxm", // Generate an app-specific password for better security
+          pass: "bkkg uqoq dbrh qhxm",
         },
       };
     
-      // Create a Nodemailer transporter using Gmail
+     
       const transporter = nodemailer.createTransport(gmailConfig);
     
       const mailOptions = {
-        from: "myrmiproductions@gmail.com", // Replace with your sender email
-        to: newUser.email, // Recipient email
+        from: "myrmiproductions@gmail.com", 
+        to: newUser.email, 
         subject: "Verify your account",
         html: `
           <h3>Email Verification</h3>
@@ -124,8 +107,6 @@ exports.Register = async (req, res, next) => {
     res.status(500).json({ message: "Registration Failed" });
   }
 };
-
-
 
 exports.Verify = async (req, res, next) => {
   try {
@@ -149,8 +130,85 @@ exports.Verify = async (req, res, next) => {
   }
 };
 
+exports.sendResetPasswordEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+ 
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
+    const resetToken = crypto.randomBytes(20).toString('hex');
 
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; 
+    await user.save();
+    const gmailConfig = {
+      service: "gmail",
+      auth: {
+        user: "myrmiproductions@gmail.com",
+        pass: "bkkg uqoq dbrh qhxm", 
+      },
+    };
+  
+
+    const transporter = nodemailer.createTransport(gmailConfig);
+    // const resetPasswordLink = `http://192.168.100.117/reset-password?token=${resetToken}`;
+    const mailOptions = {
+      from: "myrmiproductions@gmail.com", 
+      to: user.email, 
+      subject: "Password Reset",
+      html: `
+        <h3>Password Reset</h3>
+        <p>You are receiving this email because you (or someone else) have requested the reset of the password for your account.</p>
+        <p>This is your reset Token: \n\n  ${resetToken}</p>
+        <p>If you did not request this, please ignore this email and your password will remain unchanged.\n</p>
+      `,
+    };
+    transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Reset password email sent successfully' });
+  } catch (error) {
+    console.error('Error sending reset password email:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  console.log(req.body)
+  try {
+    
+    const { token, password } = req.body;
+
+    // Find the user by the reset token
+    const user = await User.findOne({ resetPasswordToken: token });
+
+    // Check if the token is valid and not expired
+    if (!user || user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    // Reset the user's password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.userProfile = async (req, res, next) => {
+  const email = req.params.email;
+  const user = await User.findOne({ email: email });
+  res.status(200).json({
+    success: true,
+    user,
+  });
+};
 
 
 

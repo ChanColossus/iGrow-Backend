@@ -22,6 +22,18 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    dp: [
+        {
+          public_id: {
+            type: String,
+            required: true,
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+        },
+      ],
     verificationToken: String,
     resetPasswordToken: String,
     
