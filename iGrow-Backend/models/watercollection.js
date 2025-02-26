@@ -15,6 +15,6 @@ const WaterCollectionSchema = new mongoose.Schema({
     },
 });
 
-const WaterCollection = mongoose.model("WaterCollection", postSchema);
+const WaterCollection = mongoose.model("WaterCollection", WaterCollectionSchema);
 
-module.exports = WaterCollectionSchema
+module.exports = WaterCollection
