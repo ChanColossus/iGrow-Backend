@@ -2,15 +2,23 @@ const WaterCollection = require("../models/watercollection");
 const crypto = require('crypto');
 const jwt = require("jsonwebtoken");
 const cloudinary = require("cloudinary");
+const moment = require("moment-timezone");
 
-exports.CreateData = async (req, res, next) => {
-   
+exports.CreateData = async (req, res) => {
     try {
-      const {WaterSource, WaterLevel} = req.body;
-      const newData = new WaterCollection({ WaterSource, WaterLevel });
+      console.log(req.body); // Debugging: Check received form-data
   
+      // Extract form-data fields
+      const { WaterSource, WaterLevel } = req.body;
+      const phTime = moment().tz("Asia/Manila").format("YYYY-MM-DD HH:mm:ss");
+      // Ensure required fields exist
+      if (!WaterSource || !WaterLevel) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+  
+      // Create and save new data
+      const newData = new WaterCollection({ WaterSource, WaterLevel,createdAt: phTime });
       await newData.save();
-   
   
       res.status(200).json({ message: "Data Created Successfully" });
     } catch (error) {
@@ -18,6 +26,7 @@ exports.CreateData = async (req, res, next) => {
       res.status(500).json({ message: "Creating Data Failed" });
     }
   };
+  
 
 //   exports.userPosts = async (req, res, next) => {
 //     try {

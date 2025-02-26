@@ -10,8 +10,7 @@ const WaterCollectionSchema = new mongoose.Schema({
         required: [true, 'Please water level'],
     },
     createdAt: {
-        type: Date,
-        default: Date.now,
+        type: String,
     },
 });
 
