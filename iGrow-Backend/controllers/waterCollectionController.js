@@ -10,7 +10,7 @@ exports.CreateData = async (req, res) => {
   
       // Extract form-data fields
       const { WaterSource, WaterLevel } = req.body;
-      const phTime = moment().tz("Asia/Manila").format("YYYY-MM-DD HH:mm:ss");
+      const phTime = moment().tz("Asia/Manila").format("MMMM D, YYYY h:mm A");
       // Ensure required fields exist
       if (!WaterSource || !WaterLevel) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -27,7 +27,27 @@ exports.CreateData = async (req, res) => {
     }
   };
   
+  exports.getData = async (req, res, next) => {
+    const data = await WaterCollection.find({});
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  };
 
+    exports.deleteData = async (req, res) => {
+      console.log(req.params.dataId)
+    try {
+      const data = await WaterCollection.findByIdAndDelete(req.params.dataId);
+      if (!data) {
+        return res.status(404).json({ success: false, error: 'Data not found' });
+      }
+      res.status(200).json({ success: true, data: {} });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
 //   exports.userPosts = async (req, res, next) => {
 //     try {
 //         const email = req.params.email;
